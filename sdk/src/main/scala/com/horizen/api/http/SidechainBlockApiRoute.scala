@@ -8,6 +8,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
+import com.horizen.box.ZenBox
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
@@ -17,17 +18,18 @@ import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
-import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ findBlockInfoById ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
   /**
@@ -118,6 +120,20 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     }
   }
 
+  /**
+   * Return the list of forgers fee payments paid after the given block was applied.
+   * Return empty list in case no fee payments were paid.
+   */
+    def getFeePayments: Route = (post & path("getFeePayments")) {
+    entity(as[ReqFeePayments]) { body =>
+      applyOnNodeView { sidechainNodeView =>
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val feePayments = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.transaction.newBoxes().asScala).getOrElse(Seq())
+        ApiResponseUtil.toResponse(RespFeePayments(feePayments))
+      }
+    }
+  }
+
   def startForging: Route = (post & path("startForging")) {
     val future = forgerRef ? StartForging
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
@@ -197,6 +213,17 @@ object SidechainBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFeePayments(blockId: String) {
+    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int)
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
@@ -243,9 +270,6 @@ object SidechainBlockRestSchema {
   private[api] object RespGenerateSkipSlot extends SuccessResponse {
     val result = "No block is generated due no eligible forger box are present, skip slot"
   }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int)
 
 }
 

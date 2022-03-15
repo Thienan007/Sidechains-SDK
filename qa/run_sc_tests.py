@@ -9,8 +9,10 @@ from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
+from sc_genesisinfo_sc_versions import SCGenesisInfoScVersions
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
+from sc_versions_and_mc_certs import SCVersionsAndMCCertificates
 from test_framework.util import assert_equal
 from mc_sc_connected_nodes import MCSCConnectedNodes
 from mc_sc_forging1 import MCSCForging1
@@ -25,6 +27,8 @@ from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
+from websocket_server_fee_payments import SCWsServerFeePayments
+from sc_closed_forger import SidechainClosedForgerTest
 from sc_node_api_test import SidechainNodeApiTest
 
 
@@ -78,6 +82,9 @@ def run_tests(log_file):
     result = run_test(SCWsServer())
     assert_equal(0, result, "websocket_server test failed!")
 
+    result = run_test(SCWsServerFeePayments())
+    assert_equal(0, result, "websocket_server_fee_payments test failed!")
+
     result = run_test(SCBackwardTransfer())
     assert_equal(0, result, "sc_backward_transfer test failed!")
 
@@ -107,6 +114,15 @@ def run_tests(log_file):
 
     result = run_test(SCCswCeasedAtEpoch3())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_3 test failed!")
+
+    result = run_test(SCGenesisInfoScVersions())
+    assert_equal(0, result, "sc_genesisinfo_sc_versions test failed!")
+
+    result = run_test(SCVersionsAndMCCertificates())
+    assert_equal(0, result, "sc_versions_and_mc_certs test failed!")
+
+    result = run_test(SidechainClosedForgerTest())
+    assert_equal(0, result, "sc_closed_forger test failed!")
 
     result = run_test(SidechainNodeApiTest())
     assert_equal(0, result, "sc_node_api_test test failed!")

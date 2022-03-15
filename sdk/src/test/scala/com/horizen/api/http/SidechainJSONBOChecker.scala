@@ -121,7 +121,7 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("id").isTextual)
 
     val headerJson: JsonNode = json.get("header")
-    assertEquals(12, headerJson.elements().asScala.length)
+    assertEquals(13, headerJson.elements().asScala.length)
     assertTrue(headerJson.get("version").isNumber)
     assertTrue(headerJson.get("parentId").isTextual)
     assertTrue(headerJson.get("timestamp").isNumber)
@@ -133,6 +133,7 @@ class SidechainJSONBOChecker {
     assertTrue(headerJson.get("vrfProof").isObject)
     assertTrue(headerJson.get("forgingStakeMerklePath").isTextual)
     assertTrue(headerJson.get("id").isTextual)
+    assertTrue(headerJson.get("feePaymentsHash").isTextual)
     assertTrue(headerJson.get("signature").isObject)
 
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.parentId)), json.get("parentId").asText())
